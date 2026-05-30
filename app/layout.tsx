@@ -5,6 +5,9 @@ import Providers from "../components/Providers";
 export const metadata: Metadata = {
   title: "RedConnect - Premium Blood Donation Platform",
   description: "Connect, Donate, and Save Lives. A high-performance web platform linking blood banks, donors, and patients in real-time.",
+  icons: {
+    icon: '/bloodicon.png', // ✅ ADD /public/ prefix here
+  },
 };
 
 export default function RootLayout({
