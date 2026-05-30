@@ -21,9 +21,9 @@ const similarity = (a = '', b = '') => {
 };
 
 const urgencyConfig: Record<string, { color: string; bg: string; border: string }> = {
-  Critical: { color: 'var(--primary)',  bg: 'rgba(255,59,87,0.1)',    border: 'rgba(255,59,87,0.25)' },
-  Urgent:   { color: 'var(--warning)',  bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)' },
-  Normal:   { color: 'var(--success)',  bg: 'rgba(16,185,129,0.1)',   border: 'rgba(16,185,129,0.25)' },
+  Critical: { color: 'var(--primary)', bg: 'rgba(255,59,87,0.1)', border: 'rgba(255,59,87,0.25)' },
+  Urgent: { color: 'var(--warning)', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.25)' },
+  Normal: { color: 'var(--success)', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.25)' },
 };
 
 export default function DonorDashboard() {
@@ -46,13 +46,13 @@ export default function DonorDashboard() {
     const formattedDate = new Date()
       .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
       .replace(/,/g, '');
-    dispatch(updateTotalDonations({ email: user.email, totalDonations: (user.totalDonations || 0) + 1 }));
-    dispatch(updateLastDonation({ email: user.email, lastDonation: formattedDate }));
+    dispatch(updateTotalDonations({ totalDonations: (user.totalDonations || 0) + 1 }));
+    dispatch(updateLastDonation({ lastDonation: formattedDate }));
   };
 
   const toggleAvailability = () => {
     if (!user?.email) return;
-    dispatch(updateAvailable({ email: user.email, available: !user.available }));
+    dispatch(updateAvailable({ available: !user.available }));
   };
 
   if (authLoading || !user) {
@@ -65,9 +65,9 @@ export default function DonorDashboard() {
   }
 
   const donationLevel =
-    (user.totalDonations || 0) >= 10 ? 'Gold'   :
-    (user.totalDonations || 0) >= 5  ? 'Silver' :
-    (user.totalDonations || 0) >= 1  ? 'Bronze' : 'New';
+    (user.totalDonations || 0) >= 10 ? 'Gold' :
+      (user.totalDonations || 0) >= 5 ? 'Silver' :
+        (user.totalDonations || 0) >= 1 ? 'Bronze' : 'New';
 
   const levelColors: Record<string, string> = {
     Gold: '#fbbf24', Silver: '#94a3b8', Bronze: '#cd7f32', New: 'var(--text-muted)',
@@ -266,9 +266,9 @@ export default function DonorDashboard() {
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Quick Actions</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
           {[
-            { href: '/donor/appeals',       icon: <Activity size={18} />,   label: 'All Appeals' },
-            { href: '/donor/notifications', icon: <Bell size={18} />,        label: 'My Alerts' },
-            { href: '/feedback',            icon: <HeartPlus size={18} />,   label: 'Give Feedback' },
+            { href: '/donor/appeals', icon: <Activity size={18} />, label: 'All Appeals' },
+            { href: '/donor/notifications', icon: <Bell size={18} />, label: 'My Alerts' },
+            { href: '/feedback', icon: <HeartPlus size={18} />, label: 'Give Feedback' },
           ].map((q) => (
             <Link
               key={q.href}

@@ -19,13 +19,13 @@ export default function BankProfilePage() {
 
   const toggleAvailable = () => {
     if (!user?.email) return;
-    dispatch(updateAvailable({ email: user.email, available: !user.available }));
+    dispatch(updateAvailable({ available: !user.available }));
   };
 
   const recordDonation = () => {
     if (!user?.email) return;
-    dispatch(updateTotalDonations({ email: user.email, totalDonations: (user.totalDonations || 0) + 1 }));
-    dispatch(updateLastDonation({ email: user.email, lastDonation: new Date().toISOString() }));
+    dispatch(updateTotalDonations({ totalDonations: (user.totalDonations || 0) + 1 }));
+    dispatch(updateLastDonation({ lastDonation: new Date().toISOString() }));
   };
 
   if (loading || !user) {
