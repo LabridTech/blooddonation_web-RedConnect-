@@ -6,11 +6,11 @@ import { AppDispatch, RootState } from '../../../redux/store';
 import { addNotification } from '../../../redux/notificationSlice';
 import { fetchBloodDonated } from '../../../redux/bloodDonatedSlice';
 import { addFeedback, fetchFeedback } from '../../../redux/feedbackSlice';
-import axios from 'axios';
-import { API_URL } from '../../../config';
-import { 
-  Users, Search, Filter, Phone, Mail, MessageSquare, Star, 
-  MapPin, Trophy, Calendar, Check, X, ShieldAlert, Loader2, Award, Droplet 
+import { ref, get } from 'firebase/database'; // Import Firebase functions
+import { db } from '../../../firebaseConfig'; // Import your Firebase config
+import {
+  Users, Search, Filter, Phone, Mail, MessageSquare, Star,
+  MapPin, Trophy, Calendar, Check, X, ShieldAlert, Loader2, Award, Droplet
 } from 'lucide-react';
 
 export default function DonorSearchScreen() {
@@ -21,7 +21,7 @@ export default function DonorSearchScreen() {
 
   const [donors, setDonors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Search & Filtering State
   const [searchQuery, setSearchQuery] = useState('');
   const [bloodFilter, setBloodFilter] = useState('');
@@ -50,18 +50,32 @@ export default function DonorSearchScreen() {
     }, 3000);
   };
 
-  const loadData = () => {
+  const loadData = async () => {
     setLoading(true);
-    axios.get(`${API_URL}/api/auth/findAll`)
-      .then(res => {
-        const matchingDonors = res.data.filter((u: any) => u.role === 'donor');
+    try {
+      // Fetch all users from Firebase Realtime Database
+      const usersRef = ref(db, 'users');
+      const snapshot = await get(usersRef);
+
+      if (snapshot.exists()) {
+        const usersObject = snapshot.val();
+        // Convert Firebase object to array and attach the UID as 'id'
+        const allUsers = Object.keys(usersObject).map(key => ({
+          id: key,
+          ...usersObject[key]
+        }));
+        // Filter for donors only
+        const matchingDonors = allUsers.filter((u: any) => u.role === 'donor');
         setDonors(matchingDonors);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error loading donors:", err);
-        setLoading(false);
-      });
+      } else {
+        setDonors([]);
+      }
+    } catch (err) {
+      console.error("Error loading donors:", err);
+    } finally {
+      setLoading(false);
+    }
+
     dispatch(fetchBloodDonated());
     dispatch(fetchFeedback());
   };
@@ -74,7 +88,6 @@ export default function DonorSearchScreen() {
     if (!lastDonationStr) return "No donations logged";
     try {
       const today = new Date();
-      // Safe parsing of custom string if mobile passed space-separated date, else standard ISO
       let lastDonationDate: Date;
       if (lastDonationStr.includes(' ')) {
         const [day, month, year] = lastDonationStr.split(' ');
@@ -89,7 +102,7 @@ export default function DonorSearchScreen() {
 
       if (isNaN(lastDonationDate.getTime())) return "Never";
       const diffTime = Math.abs(today.getTime() - lastDonationDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 6050 * 24));
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Fixed missing 60s multiplier
       return `${diffDays} days ago`;
     } catch {
       return "Never";
@@ -163,7 +176,8 @@ export default function DonorSearchScreen() {
   // Filtering Donor List
   const filteredDonors = donors.filter(d => {
     const nameMatches = d.name?.toLowerCase().includes(searchQuery.toLowerCase()) || d.address?.toLowerCase().includes(searchQuery.toLowerCase());
-    const bloodMatches = bloodFilter ? d.blood_type === bloodFilter : true;
+    // Note: Changed d.blood_type to d.bloodType to match Firebase schema
+    const bloodMatches = bloodFilter ? d.bloodType === bloodFilter : true;
     const availMatches = availFilter === 'all' ? true : availFilter === 'available' ? d.available : !d.available;
     return nameMatches && bloodMatches && availMatches;
   });
@@ -196,7 +210,7 @@ export default function DonorSearchScreen() {
         {/* Search query input */}
         <div style={{ position: 'relative', width: '100%' }}>
           <Search size={16} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-muted)' }} />
-          <input 
+          <input
             type="text"
             className="form-input-field"
             placeholder="Search donors by name or street address..."
@@ -265,9 +279,9 @@ export default function DonorSearchScreen() {
         }}>
           {filteredDonors.map((donor, idx) => {
             const isAvail = donor.available;
-            
+
             // Check if transaction exists between donor and bank
-            const canReview = donations.some(d => 
+            const canReview = donations.some(d =>
               (d.donorId === donor.email && d.receiverId === user?.email) ||
               (d.donorId === user?.email && d.receiverId === donor.email)
             );
@@ -299,13 +313,14 @@ export default function DonorSearchScreen() {
                       fontWeight: 700,
                       color: 'var(--primary)'
                     }}>
-                      {donor.name.charAt(0).toUpperCase()}
+                      {donor.name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 style={{ fontSize: '16px', color: '#fff', lineHeight: 1.2 }}>{donor.name}</h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                         <Droplet size={12} color="var(--primary)" fill="var(--primary)" />
-                        <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 700 }}>Blood Type: {donor.blood_type}</span>
+                        {/* Changed donor.blood_type to donor.bloodType */}
+                        <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 700 }}>Blood Type: {donor.bloodType}</span>
                       </div>
                     </div>
                   </div>
@@ -343,7 +358,7 @@ export default function DonorSearchScreen() {
 
                 {/* Card Action Buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <a 
+                  <a
                     href={`tel:${donor.phone}`}
                     className="btn-premium btn-premium-secondary"
                     style={{ padding: '10px', fontSize: '13px', borderRadius: '8px' }}
@@ -351,8 +366,8 @@ export default function DonorSearchScreen() {
                     <Phone size={14} />
                     Call Donor
                   </a>
-                  
-                  <button 
+
+                  <button
                     onClick={() => {
                       setSelectedDonor(donor);
                       setNotifyModalOpen(true);
@@ -365,7 +380,7 @@ export default function DonorSearchScreen() {
                   </button>
 
                   {canReview && (
-                    <button 
+                    <button
                       onClick={() => {
                         setFeedbackDonor(donor);
                         setFeedbackModalOpen(true);
@@ -441,13 +456,14 @@ export default function DonorSearchScreen() {
             )}
 
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              You are requesting a blood donation from <strong>{selectedDonor.name}</strong> ({selectedDonor.blood_type}).
+              {/* Changed selectedDonor.blood_type to selectedDonor.bloodType */}
+              You are requesting a blood donation from <strong>{selectedDonor.name}</strong> ({selectedDonor.bloodType}).
             </p>
 
             <form onSubmit={handleSendRequest} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Number of Units Required</label>
-                <input 
+                <input
                   type="number"
                   className="form-input-field"
                   placeholder="e.g. 2"
@@ -513,8 +529,8 @@ export default function DonorSearchScreen() {
                       onClick={() => setFeedbackRating(num)}
                       className="star-rating-btn"
                     >
-                      <Star 
-                        size={28} 
+                      <Star
+                        size={28}
                         color={feedbackRating >= num ? "var(--warning)" : "var(--text-muted)"}
                         fill={feedbackRating >= num ? "var(--warning)" : "transparent"}
                       />
@@ -526,7 +542,7 @@ export default function DonorSearchScreen() {
               {/* Message review */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>Review Description</label>
-                <textarea 
+                <textarea
                   className="form-input-field"
                   placeholder="Share details about the donor's responsiveness and support..."
                   value={feedbackText}
@@ -564,3 +580,4 @@ function styleQueryFix() {
     `}</style>
   );
 }
+```
