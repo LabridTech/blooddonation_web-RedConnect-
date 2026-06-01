@@ -57,8 +57,7 @@ export default function LandingPage() {
   };
 
   const redirectUser = (role: string) => {
-    if (role === 'patient') router.push('/patient');
-    else if (role === 'donor') router.push('/donor');
+    if (role === 'user' || role === 'patient' || role === 'donor') router.push('/user');
     else if (role === 'bank') router.push('/bank');
     else triggerToast('Invalid role.', 'error');
   };

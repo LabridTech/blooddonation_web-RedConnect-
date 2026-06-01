@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell, Calendar, CheckCircle, Droplet, HeartPlus,
   Loader2, MapPin, Phone, ChevronRight, Sparkles,
-  Activity, TrendingUp, Clock
+  Activity, TrendingUp, Clock,
+  Users
 } from 'lucide-react';
 import { fetchBloodAppeals } from '../../redux/bloodAppealSlice';
-import { updateAvailable, updateLastDonation, updateTotalDonations } from '../../redux/authSlice';
+import { updateAvailable, updateLastDonation, updateTotalDonations, fetchDonorsByCity, User } from '../../redux/authSlice';
 import { AppDispatch, RootState } from '../../redux/store';
 
 const similarity = (a = '', b = '') => {
@@ -26,12 +27,33 @@ const urgencyConfig: Record<string, { color: string; bg: string; border: string 
   Normal: { color: 'var(--success)', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.25)' },
 };
 
+const formatAvailabilityWindow = (person?: Pick<User, 'availabilityStart' | 'availabilityEnd'>) => {
+  if (!person?.availabilityStart && !person?.availabilityEnd) return 'Any time';
+  if (person.availabilityStart && person.availabilityEnd) return `${person.availabilityStart} - ${person.availabilityEnd}`;
+  if (person.availabilityStart) return `From ${person.availabilityStart}`;
+  return `Until ${person.availabilityEnd}`;
+};
+
 export default function DonorDashboard() {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, loading: authLoading } = useSelector((state: RootState) => state.auth);
+  const { user, loading: authLoading, sameCityDonors } = useSelector((state: RootState) => state.auth);
   const { appeals, loading } = useSelector((state: RootState) => state.bloodAppeal);
+  const [availabilityStart, setAvailabilityStart] = useState('');
+  const [availabilityEnd, setAvailabilityEnd] = useState('');
 
   useEffect(() => { dispatch(fetchBloodAppeals()); }, [dispatch]);
+
+  // 🔽 NEW: Fetch donors in the same city
+  useEffect(() => {
+    if (user?.city) {
+      dispatch(fetchDonorsByCity());
+    }
+  }, [dispatch, user?.city]);
+
+  useEffect(() => {
+    setAvailabilityStart(user?.availabilityStart || '');
+    setAvailabilityEnd(user?.availabilityEnd || '');
+  }, [user?.availabilityStart, user?.availabilityEnd]);
 
   const nearbyAppeals = useMemo(() => {
     if (!user) return [];
@@ -53,6 +75,17 @@ export default function DonorDashboard() {
   const toggleAvailability = () => {
     if (!user?.email) return;
     dispatch(updateAvailable({ available: !user.available }));
+  };
+
+  const saveAvailabilityTiming = () => {
+    if (!user?.email) return;
+    dispatch(updateAvailable({
+      available: Boolean(user.available),
+      availabilityStart,
+      availabilityEnd,
+    })).then(() => {
+      dispatch(fetchDonorsByCity());
+    });
   };
 
   if (authLoading || !user) {
@@ -117,11 +150,15 @@ export default function DonorDashboard() {
               }} />
               {user.available ? 'Available' : 'Unavailable'}
             </span>
+            <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent)', border: '1px solid rgba(59,130,246,0.25)' }}>
+              <Clock size={11} />
+              {formatAvailabilityWindow(user)}
+            </span>
           </div>
         </div>
 
         <Link
-          href="/donor/notifications"
+          href="/user/notifications"
           className="btn-premium btn-premium-secondary"
           style={{ flexShrink: 0 }}
         >
@@ -165,8 +202,29 @@ export default function DonorDashboard() {
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Donor Status</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-            Toggle availability so blood banks can contact you when needed.
+            Set your availability and the time window when blood banks can contact you.
           </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 14 }}>
+          <label className="form-group">
+            <span className="form-label">Available From</span>
+            <input
+              type="time"
+              className="form-input-field"
+              value={availabilityStart}
+              onChange={(event) => setAvailabilityStart(event.target.value)}
+            />
+          </label>
+          <label className="form-group">
+            <span className="form-label">Available Until</span>
+            <input
+              type="time"
+              className="form-input-field"
+              value={availabilityEnd}
+              onChange={(event) => setAvailabilityEnd(event.target.value)}
+            />
+          </label>
         </div>
 
         <div style={{
@@ -182,6 +240,15 @@ export default function DonorDashboard() {
           >
             <CheckCircle size={17} />
             {user.available ? 'Mark Unavailable' : 'Mark Available'}
+          </button>
+
+          <button
+            onClick={saveAvailabilityTiming}
+            className="btn-premium btn-premium-secondary"
+            style={{ flex: '1 1 160px' }}
+          >
+            <Clock size={17} />
+            Save Timing
           </button>
 
           {/* Record donation button */}
@@ -225,6 +292,37 @@ export default function DonorDashboard() {
         )}
       </section>
 
+      {/* 🔽 NEW SECTION: Donors in your city */}
+      <section>
+        <div className="section-header">
+          <div>
+            <h2 className="section-title">
+              <Users size={18} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+              Donors in {user.city}
+            </h2>
+            <p className="section-subtitle">Connect with fellow donors nearby</p>
+          </div>
+          <Link href="/user/donors" className="section-action">
+            View All <ChevronRight size={14} />
+          </Link>
+        </div>
+
+        {!sameCityDonors || sameCityDonors.length === 0 ? (
+          <div className="glass-panel empty-state">
+            <Users size={24} style={{ color: 'var(--text-muted)', marginBottom: 8 }} />
+            <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>No other donors found in your city yet.</p>
+            <p style={{ fontSize: 13 }}>Invite friends to join and grow your local donor network.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+            {sameCityDonors.map((donor) => (
+              <DonorTile key={donor.uid} donor={donor} />
+            ))}
+          </div>
+        )}
+
+      </section>
+
       {/* ── Nearby Blood Requests ── */}
       <section>
         <div className="section-header">
@@ -232,7 +330,7 @@ export default function DonorDashboard() {
             <h2 className="section-title">Nearby Requests</h2>
             <p className="section-subtitle">Blood appeals in your area</p>
           </div>
-          <Link href="/donor/appeals" className="section-action">
+          <Link href="/user/appeals" className="section-action">
             View All <ChevronRight size={14} />
           </Link>
         </div>
@@ -266,8 +364,9 @@ export default function DonorDashboard() {
         <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 14 }}>Quick Actions</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
           {[
-            { href: '/donor/appeals', icon: <Activity size={18} />, label: 'All Appeals' },
-            { href: '/donor/notifications', icon: <Bell size={18} />, label: 'My Alerts' },
+            { href: '/user/blood-appeal', icon: <HeartPlus size={18} />, label: 'New Appeal' },
+            { href: '/user/appeals', icon: <Activity size={18} />, label: 'All Appeals' },
+            { href: '/user/notifications', icon: <Bell size={18} />, label: 'My Alerts' },
             { href: '/feedback', icon: <HeartPlus size={18} />, label: 'Give Feedback' },
           ].map((q) => (
             <Link
@@ -379,5 +478,37 @@ function AppealCard({ appeal }: { appeal: any }) {
         )}
       </div>
     </article>
+  );
+}
+
+
+/* ── NEW SUB-COMPONENT: DonorTile ── */
+function DonorTile({ donor }: { donor: User }) {
+  const levelColors: Record<string, string> = {
+    Gold: '#fbbf24', Silver: '#94a3b8', Bronze: '#cd7f32', New: 'var(--text-muted)',
+  };
+  const donationLevel =
+    (donor.totalDonations || 0) >= 10 ? 'Gold' :
+      (donor.totalDonations || 0) >= 5 ? 'Silver' :
+        (donor.totalDonations || 0) >= 1 ? 'Bronze' : 'New';
+
+  return (
+    <div className="glass-panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center', transition: 'transform 0.2s ease', cursor: 'default' }}>
+      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,59,87,0.1)', display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 700, color: 'var(--primary)' }}>
+        {donor.name?.charAt(0).toUpperCase() || '?'}
+      </div>
+      <h3 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: 'var(--text)' }}>{donor.name || 'Anonymous'}</h3>
+      <span className="badge" style={{ background: `${levelColors[donationLevel]}18`, color: levelColors[donationLevel], border: `1px solid ${levelColors[donationLevel]}40`, fontSize: 11, padding: '2px 8px' }}>
+        {donor.bloodType || 'N/A'} • {donationLevel}
+      </span>
+      <span style={{ fontSize: 12, color: donor.available ? 'var(--success)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+        {donor.available ? 'Available' : 'Unavailable'}
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <Clock size={12} />
+        {formatAvailabilityWindow(donor)}
+      </span>
+    </div>
   );
 }

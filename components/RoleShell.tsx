@@ -6,44 +6,59 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Bell, FileText, HeartPulse, Home, LogOut,
-  Menu, PlusCircle, User, X, ChevronRight
+  Menu, PlusCircle, User, X, ChevronRight,
+  Users
 } from 'lucide-react';
 import { logoutUser } from '../redux/authSlice';
 import { AppDispatch, RootState } from '../redux/store';
 
 type Role = 'donor' | 'patient';
+type AccountRole = 'bank' | 'user' | 'donor' | 'patient';
 
 const roleNav: Record<Role, { href: string; label: string; icon: React.ReactNode; short: string }[]> = {
   donor: [
-    { href: '/donor',                 label: 'Dashboard',     short: 'Home',    icon: <Home size={20} /> },
-    { href: '/donor/appeals',         label: 'Blood Appeals', short: 'Appeals', icon: <FileText size={20} /> },
-    { href: '/donor/notifications',   label: 'Notifications', short: 'Alerts',  icon: <Bell size={20} /> },
-    { href: '/feedback',              label: 'Feedback',      short: 'Rate',    icon: <HeartPulse size={20} /> },
+    { href: '/user', label: 'Dashboard', short: 'Home', icon: <Home size={20} /> },
+    { href: '/user/blood-appeal', label: 'New Appeal', short: 'Appeal', icon: <PlusCircle size={20} /> },
+    { href: '/user/appeals', label: 'Blood Appeals', short: 'Appeals', icon: <FileText size={20} /> },
+    { href: '/user/notifications', label: 'Notifications', short: 'Alerts', icon: <Bell size={20} /> },
+    { href: '/user/donors', label: 'Donor List', short: 'Donors', icon: <Users size={20} /> },
+    { href: '/feedback', label: 'Feedback', short: 'Rate', icon: <HeartPulse size={20} /> },
   ],
   patient: [
-    { href: '/patient',              label: 'Dashboard',    short: 'Home',   icon: <Home size={20} /> },
-    { href: '/patient/blood-appeal', label: 'New Appeal',  short: 'Appeal', icon: <PlusCircle size={20} /> },
-    { href: '/feedback',             label: 'Feedback',     short: 'Rate',   icon: <HeartPulse size={20} /> },
+    { href: '/patient', label: 'Dashboard', short: 'Home', icon: <Home size={20} /> },
+    { href: '/patient/blood-appeal', label: 'New Appeal', short: 'Appeal', icon: <PlusCircle size={20} /> },
+    { href: '/feedback', label: 'Feedback', short: 'Rate', icon: <HeartPulse size={20} /> },
   ],
 };
 
+const getPortalHref = (activeRole?: AccountRole) => {
+  if (activeRole === 'bank') return '/bank';
+  return '/user';
+};
+
+const isAllowedRole = (activeRole: AccountRole | undefined, shellRole: Role) => {
+  if (!activeRole) return true;
+  if (shellRole === 'donor') return activeRole === 'user' || activeRole === 'donor' || activeRole === 'patient';
+  return activeRole === shellRole;
+};
+
 export default function RoleShell({ role, children }: { role: Role; children: React.ReactNode }) {
-  const router   = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
 
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [menuOpen, setMenuOpen]         = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const token      = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     const activeRole = user?.role ?? (storedUser ? JSON.parse(storedUser).role : undefined);
 
     if (!token) { router.push('/auth/login'); return; }
-    if (activeRole && activeRole !== role) {
-      router.push(activeRole === 'bank' ? '/bank' : `/${activeRole}`);
+    if (!isAllowedRole(activeRole, role)) {
+      router.push(getPortalHref(activeRole));
       return;
     }
     setCheckingAuth(false);
@@ -56,7 +71,7 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
     dispatch(logoutUser()).unwrap().then(() => router.push('/'));
   };
 
-  const navItems = roleNav[role];
+  const navItems = roleNav[role === 'patient' ? 'patient' : 'donor'];
 
   /* ── Loading skeleton ── */
   if (checkingAuth) {
@@ -88,7 +103,8 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
     .slice(0, 2)
     .toUpperCase();
 
-  const avatarBg = role === 'donor' ? 'linear-gradient(135deg, #ff3b57, #b91c3c)' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
+  const avatarBg = 'linear-gradient(135deg, #ff3b57, #b91c3c)';
+  const portalLabel = role === 'patient' ? 'Patient' : 'User';
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-deep)', display: 'flex', flexDirection: 'column' }}>
@@ -98,7 +114,7 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
          ══════════════════════════════ */}
       <header className="app-header">
         {/* Brand */}
-        <Link href={`/${role}`} className="header-brand" style={{ textDecoration: 'none' }}>
+        <Link href={role === 'patient' ? '/patient' : '/user'} className="header-brand" style={{ textDecoration: 'none' }}>
           <div style={{
             width: 34, height: 34, borderRadius: '50%',
             background: 'var(--primary-glow)',
@@ -108,7 +124,7 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
             <HeartPulse size={16} color="var(--primary)" />
           </div>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16 }}>
-            {role === 'donor' ? 'Donor' : 'Patient'}
+            {portalLabel}
             <span style={{ color: 'var(--primary)' }}> Portal</span>
           </span>
           <div className="brand-dot" />
@@ -186,7 +202,7 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
               </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{user.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{role}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{portalLabel}</div>
               </div>
             </div>
           )}

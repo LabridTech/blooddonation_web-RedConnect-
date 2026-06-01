@@ -62,7 +62,7 @@ export default function BankDashboard() {
       const emailMatches = appeal.userEmail === user.email;
       
       const similarity = getSimilarity(appealCity, userCity);
-      return appeal.role === 'patient' && !emailMatches && similarity >= threshold;
+      return (appeal.role === 'user' || appeal.role === 'patient') && !emailMatches && similarity >= threshold;
     }).map((appeal, index) => {
       // Self-contained fallback mock distances for web rendering
       const mockDistances = ["2.4 km", "4.8 km", "7.1 km", "12.3 km", "18.5 km"];

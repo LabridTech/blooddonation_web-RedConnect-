@@ -26,15 +26,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+  const redirectUser = (role: string) => {
+    if (role === 'bank') router.push('/bank');
+    else if (role === 'user' || role === 'donor' || role === 'patient') router.push('/user');
+  };
+
   useEffect(() => {
     if (user) redirectUser(user.role);
   }, [user]);
-
-  const redirectUser = (role: string) => {
-    if (role === 'bank') router.push('/bank');
-    else if (role === 'donor') router.push('/donor');
-    else if (role === 'patient') router.push('/patient');
-  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();

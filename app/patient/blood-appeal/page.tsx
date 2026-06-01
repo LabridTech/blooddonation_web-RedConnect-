@@ -1,11 +1,5 @@
-import BloodAppealWebForm from '../../../components/BloodAppealWebForm';
+import { redirect } from 'next/navigation';
 
-export default function PatientBloodAppealPage() {
-  return (
-    <BloodAppealWebForm
-      backHref="/patient"
-      title="Blood Appeal"
-      subtitle="Request blood donation from nearby donors and blood banks."
-    />
-  );
+export default function PatientBloodAppealRedirectPage() {
+  redirect('/user/blood-appeal');
 }

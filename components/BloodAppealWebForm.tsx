@@ -48,9 +48,9 @@ export default function BloodAppealWebForm({
     if (!user) return;
     setFormData((prev) => ({
       ...prev,
-      bloodType:     user.role === 'patient' ? user.bloodType || prev.bloodType : prev.bloodType,
+      bloodType:     user.role !== 'bank' ? user.bloodType || prev.bloodType : prev.bloodType,
       contactNumber: user.phone   || '',
-      patientName:   user.role === 'patient' ? user.name : prev.patientName,
+      patientName:   user.role !== 'bank' ? user.name : prev.patientName,
       address:       user.address || '',
       city:          user.city    || '',
       country:       user.country || '',
@@ -94,7 +94,7 @@ export default function BloodAppealWebForm({
         setFormData((prev) => ({
           ...prev,
           units: '', additionalInfo: '',
-          patientName: user.role === 'patient' ? user.name : '',
+          patientName: user.role !== 'bank' ? user.name : '',
         }));
         window.scrollTo({ top: 0, behavior: 'smooth' });
       })

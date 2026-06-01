@@ -10,8 +10,15 @@ import { ref, get } from 'firebase/database'; // Import Firebase functions
 import { db } from '../../../firebaseConfig'; // Import your Firebase config
 import {
   Users, Search, Filter, Phone, Mail, MessageSquare, Star,
-  MapPin, Trophy, Calendar, Check, X, ShieldAlert, Loader2, Award, Droplet
+  MapPin, Trophy, Calendar, Check, X, ShieldAlert, Loader2, Award, Droplet, Clock
 } from 'lucide-react';
+
+const formatAvailabilityWindow = (donor: { availabilityStart?: string; availabilityEnd?: string }) => {
+  if (!donor.availabilityStart && !donor.availabilityEnd) return 'Any time';
+  if (donor.availabilityStart && donor.availabilityEnd) return `${donor.availabilityStart} - ${donor.availabilityEnd}`;
+  if (donor.availabilityStart) return `From ${donor.availabilityStart}`;
+  return `Until ${donor.availabilityEnd}`;
+};
 
 export default function DonorSearchScreen() {
   const dispatch = useDispatch<AppDispatch>();
@@ -64,8 +71,8 @@ export default function DonorSearchScreen() {
           id: key,
           ...usersObject[key]
         }));
-        // Filter for donors only
-        const matchingDonors = allUsers.filter((u: any) => u.role === 'donor');
+        // User accounts can both donate and request blood.
+        const matchingDonors = allUsers.filter((u: any) => u.role === 'user' || u.role === 'donor');
         setDonors(matchingDonors);
       } else {
         setDonors([]);
@@ -353,6 +360,10 @@ export default function DonorSearchScreen() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Trophy size={14} style={{ color: 'var(--text-muted)' }} />
                     <span>Total Donations: {donor.totalDonations || 0} made</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span>Available Time: {formatAvailabilityWindow(donor)}</span>
                   </div>
                 </div>
 

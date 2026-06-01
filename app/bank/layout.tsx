@@ -26,9 +26,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     if (!token) {
       router.push("/auth/login");
     } else if (user && user.role !== 'bank') {
-      // Redirect out if they are a donor or patient
-      if (user.role === 'donor') router.push('/donor');
-      else if (user.role === 'patient') router.push('/patient');
+      router.push('/user');
     } else {
       setCheckingAuth(false);
     }

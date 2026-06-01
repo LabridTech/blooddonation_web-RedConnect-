@@ -24,8 +24,8 @@ export default function PatientAppealsScreen() {
 
   useEffect(() => {
     if (!appeals) return;
-    // Filter only patient appeals
-    const patients = appeals.filter(appeal => appeal.role === 'patient');
+    // User accounts can create patient-style blood appeals.
+    const patients = appeals.filter(appeal => appeal.role === 'user' || appeal.role === 'patient');
     
     if (filterUrgency === 'all') {
       setFilteredAppeals(patients);

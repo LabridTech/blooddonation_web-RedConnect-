@@ -22,7 +22,7 @@ export default function RegisterPage() {
     address: '',
     phone: '',
     role: '',
-    available: false,
+    available: true,
     lastDonation: null as any,
     totalDonations: 0,
     age: '',
@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
     // Basic Validation
     if (!formData.role) {
-      setErrorMsg("Please select a portal role (Donor, Patient, or Blood Bank).");
+      setErrorMsg("Please select an account type (User or Blood Bank).");
       return;
     }
 
@@ -147,8 +147,7 @@ export default function RegisterPage() {
             <label className="form-label">Select Your Role *</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
               {[
-                { value: 'donor',   label: '🩸 Donor',      desc: 'Donate blood and save lives' },
-                { value: 'patient', label: '🏥 Patient',     desc: 'Request blood donations' },
+                { value: 'user',    label: 'User',          desc: 'Donate blood and request help' },
                 { value: 'bank',    label: '🏦 Blood Bank',  desc: 'Manage blood inventory' },
               ].map(item => {
                 const sel = formData.role === item.value;

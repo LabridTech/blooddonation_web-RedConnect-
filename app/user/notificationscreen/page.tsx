@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function OldDonorNotificationRoute() {
+export default function UserNotificationScreenRedirect() {
   redirect('/user/notifications');
 }
