@@ -1,93 +1,76 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { registerUser, signInWithGoogle } from '../../../redux/authSlice';
-import { AppDispatch } from '../../../redux/store';
-import { User, Mail, Lock, Phone, MapPin, Calendar, Heart, Shield, ArrowLeft, Loader2, Chrome } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { completeGoogleProfile } from '../../../redux/authSlice';
+import { AppDispatch, RootState } from '../../../redux/store';
+import { Phone, MapPin, Calendar, Shield, Loader2, ArrowRight, CheckCircle2, User } from 'lucide-react';
 
-export default function RegisterPage() {
+export default function CompleteProfilePage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const [loading, setLoading] = useState(false);
+  const { loading, error } = useSelector((state: RootState) => state.auth);
+
   const [errorMsg, setErrorMsg] = useState('');
+  const [draftName, setDraftName] = useState('');
+  const [draftEmail, setDraftEmail] = useState('');
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    role: '',
     bloodType: 'A+',
     address: '',
     phone: '',
-    role: '',
-    available: true,
-    lastDonation: null as any,
-    totalDonations: 0,
     age: '',
     city: '',
     country: ''
   });
 
-  const handleChange = (field: string, value: any) => {
+  useEffect(() => {
+    const draft = localStorage.getItem('googleProfileDraft');
+    if (draft) {
+      const parsed = JSON.parse(draft);
+      setDraftName(parsed.name || '');
+      setDraftEmail(parsed.email || '');
+    } else {
+      // If no draft found, they probably shouldn't be here or just refreshed after logout
+      router.push('/auth/login');
+    }
+  }, [router]);
+
+  const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    // Basic Validation
     if (!formData.role) {
-      setErrorMsg("Please select an account type (User or Blood Bank).");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setErrorMsg("Passwords do not match.");
+      setErrorMsg("Please select an account type.");
       return;
     }
 
     if (formData.phone.length < 10) {
-      setErrorMsg("Please enter a valid phone number (min 10 digits).");
+      setErrorMsg("Please enter a valid phone number.");
       return;
     }
 
-    setLoading(true);
-    const registerPayload = {
+    const payload = {
       ...formData,
       age: parseInt(formData.age) || 0,
-      lastDonation: new Date().toISOString(),
-      totalDonations: 0
+      name: draftName,
+      email: draftEmail
     };
 
-    dispatch(registerUser(registerPayload))
-      .unwrap()
-      .then(() => {
-        setLoading(false);
-        router.push("/");
-      })
-      .catch((err) => {
-        setLoading(false);
-        setErrorMsg(err || "Failed to register account.");
-      });
-  };
-
-  const handleGoogleRegister = () => {
-    setErrorMsg('');
-    setLoading(true);
-    dispatch(signInWithGoogle())
+    dispatch(completeGoogleProfile(payload))
       .unwrap()
       .then((res) => {
-        setLoading(false);
-        if (res.needsProfile) router.push('/auth/complete-profile');
-        else if (res.user?.role === 'bank') router.push('/bank');
+        if (res.user?.role === 'bank') router.push('/bank');
         else router.push('/user');
       })
       .catch((err) => {
-        setLoading(false);
-        setErrorMsg(err || 'Google sign up failed.');
+        setErrorMsg(err || 'Failed to complete profile.');
       });
   };
 
@@ -111,37 +94,24 @@ export default function RegisterPage() {
         padding: 'clamp(24px, 4vw, 48px)',
         zIndex: 10,
       }}>
-        {/* Back Link */}
-        <button
-          onClick={() => router.push('/auth/login')}
-          className="btn-premium btn-premium-ghost"
-          style={{ padding: '6px 0', fontSize: 13, marginBottom: 24 }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-        >
-          <ArrowLeft size={15} />
-          Back to Login
-        </button>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div className="heartbeat-animation" style={{
-            width: 52, height: 52,
+            width: 56, height: 56, margin: '0 auto 16px',
             background: 'var(--primary-glow)',
             border: '1px solid rgba(255,59,87,0.25)',
             borderRadius: '50%',
-            display: 'grid', placeItems: 'center', flexShrink: 0,
+            display: 'grid', placeItems: 'center',
           }}>
-            <Heart size={24} color="var(--primary)" fill="var(--primary)" />
+            <CheckCircle2 size={26} color="var(--primary)" fill="rgba(255,59,87,0.2)" />
           </div>
-          <div>
-            <h1 style={{ fontSize: 'clamp(20px, 3.5vw, 28px)', fontWeight: 800 }}>Create Your Account</h1>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>Join RedConnect to start saving lives today</p>
-          </div>
+          <h1 style={{ fontSize: 'clamp(20px, 3.5vw, 26px)', fontWeight: 800 }}>Almost there, {draftName.split(' ')[0]}!</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 4 }}>
+            Please complete your profile to continue.
+          </p>
         </div>
 
-        {/* Error Alert */}
-        {errorMsg && (
+        {(errorMsg || error) && (
           <div className="fade-in" style={{
             padding: '12px 16px',
             background: 'rgba(239,68,68,0.1)',
@@ -153,28 +123,11 @@ export default function RegisterPage() {
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             <Shield size={15} style={{ flexShrink: 0 }} />
-            {errorMsg}
+            {errorMsg || error}
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleGoogleRegister}
-          disabled={loading}
-          className="btn-premium btn-premium-secondary"
-          style={{ width: '100%', padding: '14px', borderRadius: 12, fontSize: 15, marginBottom: 22 }}
-        >
-          {loading ? (
-            <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Connecting...</>
-          ) : (
-            <><Chrome size={18} />Sign up with Google</>
-          )}
-        </button>
-
-        <div className="divider-label" style={{ marginBottom: 24 }}>or create with email</div>
-
-        {/* Form Grid */}
-        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Role Selection */}
           <div className="form-group">
             <label className="form-label">Select Your Role *</label>
@@ -209,40 +162,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Fields Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-
-            <div className="form-group">
-              <label className="form-label">Name / Organisation *</label>
-              <div className="input-icon-wrap">
-                <User size={15} className="input-icon" />
-                <input type="text" className="form-input-field" placeholder="John Doe" value={formData.name} onChange={e => handleChange('name', e.target.value)} required />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email Address *</label>
-              <div className="input-icon-wrap">
-                <Mail size={15} className="input-icon" />
-                <input type="email" className="form-input-field" placeholder="name@example.com" value={formData.email} onChange={e => handleChange('email', e.target.value)} required autoComplete="email" />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Password *</label>
-              <div className="input-icon-wrap">
-                <Lock size={15} className="input-icon" />
-                <input type="password" className="form-input-field" placeholder="Min 8 characters" value={formData.password} onChange={e => handleChange('password', e.target.value)} required autoComplete="new-password" />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Confirm Password *</label>
-              <div className="input-icon-wrap">
-                <Lock size={15} className="input-icon" />
-                <input type="password" className="form-input-field" placeholder="••••••••" value={formData.confirmPassword} onChange={e => handleChange('confirmPassword', e.target.value)} required autoComplete="new-password" />
-              </div>
-            </div>
 
             {formData.role !== 'bank' ? (
               <div className="form-group">
@@ -315,30 +235,12 @@ export default function RegisterPage() {
             style={{ width: '100%', padding: '15px', borderRadius: 12, fontSize: 15, marginTop: 8 }}
           >
             {loading ? (
-              <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Creating Account…</>
+              <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Saving Profile…</>
             ) : (
-              <><User size={18} />Create Account</>
+              <>Complete Sign Up <ArrowRight size={18} /></>
             )}
           </button>
         </form>
-
-        {/* Footer link */}
-        <div style={{
-          textAlign: 'center',
-          marginTop: 28,
-          paddingTop: 20,
-          borderTop: '1px solid var(--border-glass)',
-          fontSize: 13,
-          color: 'var(--text-secondary)',
-        }}>
-          Already have an account?{' '}
-          <button
-            onClick={() => router.push('/auth/login')}
-            style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: 'inherit' }}
-          >
-            Sign in here
-          </button>
-        </div>
       </div>
     </div>
   );

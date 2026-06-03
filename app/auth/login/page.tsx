@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../../../redux/authSlice';
+import { loginUser, signInWithGoogle } from '../../../redux/authSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
 import {
   Mail, Lock, LogIn, ArrowLeft, Loader2, Heart,
-  HeartPulse, Droplet, ShieldCheck, Eye, EyeOff
+  HeartPulse, Droplet, ShieldCheck, Eye, EyeOff, Chrome
 } from 'lucide-react';
 
 const highlights = [
@@ -45,6 +45,17 @@ export default function LoginPage() {
     dispatch(loginUser({ email, password }))
       .unwrap()
       .then((res) => redirectUser(res.user.role))
+      .catch(() => {});
+  };
+
+  const handleGoogleAuth = () => {
+    setValidationError('');
+    dispatch(signInWithGoogle())
+      .unwrap()
+      .then((res) => {
+        if (res.needsProfile) router.push('/auth/complete-profile');
+        else if (res.user) redirectUser(res.user.role);
+      })
       .catch(() => {});
   };
 
@@ -255,6 +266,22 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="divider-label" style={{ margin: '22px 0' }}>or continue with</div>
+
+          <button
+            type="button"
+            onClick={handleGoogleAuth}
+            disabled={loading}
+            className="btn-premium btn-premium-secondary"
+            style={{ width: '100%', padding: '14px', borderRadius: 12, fontSize: 15 }}
+          >
+            {loading ? (
+              <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Connecting...</>
+            ) : (
+              <><Chrome size={18} />Continue with Google</>
+            )}
+          </button>
 
           {/* Footer */}
           <div style={{

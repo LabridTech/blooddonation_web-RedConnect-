@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { MessageSquare, Phone, Send, Star, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, MessageSquare, Phone, Send, Star, X } from 'lucide-react';
 import { addFeedback } from '../../redux/feedbackSlice';
 import { AppDispatch } from '../../redux/store';
 
@@ -24,6 +25,7 @@ const policy = `Privacy Policy
 
 export default function FeedbackPage() {
   const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const [feedback, setFeedback] = useState('');
   const [rating, setRating] = useState(0);
   const [modalContent, setModalContent] = useState<'terms' | 'policy' | null>(null);
@@ -59,6 +61,41 @@ export default function FeedbackPage() {
   return (
     <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '32px 20px' }}>
       <section className="glass-panel" style={{ width: '100%', maxWidth: '720px', padding: '32px', display: 'grid', gap: '24px' }}>
+
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '8px',
+            padding: '8px 16px',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            width: 'fit-content',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+          }}
+          aria-label="Go back to previous page"
+        >
+          <ArrowLeft size={18} />
+          Back
+        </button>
+
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ width: '48px', height: '48px', display: 'grid', placeItems: 'center', borderRadius: '10px', background: 'var(--primary-glow)', border: '1px solid rgba(255,59,87,.2)' }}>
             <MessageSquare size={24} color="var(--primary)" />

@@ -150,9 +150,9 @@ export default function RoleShell({ role, children }: { role: Role; children: Re
         {/* Desktop Right: Avatar + Logout */}
         <div className="desktop-nav" style={{ gap: 10 }}>
           {user?.name && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div onClick={() => router.push('/user/setting')} className="cursor-pointer" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div
-                className="avatar avatar-sm"
+                className="avatar avatar-sm cursor-pointer"
                 style={{ background: avatarBg, fontSize: 12, fontWeight: 700 }}
               >
                 {initials}

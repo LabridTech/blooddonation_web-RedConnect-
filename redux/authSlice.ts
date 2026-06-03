@@ -1,8 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
-import { getDatabase, ref, set, get, update } from "firebase/database";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { ref, set, get, update } from "firebase/database";
 import { auth, db } from "../firebaseConfig"; // Import from your config
-import { query, orderByChild, equalTo } from "firebase/database";
 
 // SSR Safe LocalStorage helpers
 const getLocalStorage = (key: string) => typeof window !== "undefined" ? localStorage.getItem(key) : null;
@@ -25,6 +24,8 @@ export interface User {
   country?: string;
   availabilityStart?: string;
   availabilityEnd?: string;
+  licenseNumber?: string;
+  operatingHours?: string;
 }
 
 interface AuthState {
@@ -45,6 +46,24 @@ const normalizeUserRole = (profile: User): User => {
   return profile;
 };
 
+const buildUserProfile = (firebaseUser: { uid: string; displayName?: string | null; email?: string | null }, userData: any): User => ({
+  uid: firebaseUser.uid,
+  name: userData.name || firebaseUser.displayName || "",
+  email: userData.email || firebaseUser.email || "",
+  role: userData.role === "bank" ? "bank" : "user",
+  available: userData.available ?? true,
+  bloodType: userData.role === "bank" ? "" : (userData.bloodType || ""),
+  phone: userData.phone || "",
+  age: userData.age || 0,
+  address: userData.address || "",
+  city: userData.city || "",
+  country: userData.country || "",
+  availabilityStart: userData.availabilityStart || "",
+  availabilityEnd: userData.availabilityEnd || "",
+  lastDonation: null,
+  totalDonations: 0,
+});
+
 const initialState: AuthState = {
   user: initialUser ? normalizeUserRole(JSON.parse(initialUser)) : null,
   token: initialToken,
@@ -64,23 +83,7 @@ export const registerUser = createAsyncThunk(
       const token = await firebaseUser.getIdToken();
 
       // 2. Prepare profile data for Realtime Database (Exclude password!)
-      const userProfile: User = {
-        uid: firebaseUser.uid,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role === "bank" ? "bank" : "user",
-        available: userData.available ?? true,
-        bloodType: userData.bloodType || "",
-        phone: userData.phone || "",
-        age: userData.age || 0,
-        address: userData.address || "",
-        city: userData.city || "",
-        country: userData.country || "",
-        availabilityStart: userData.availabilityStart || "",
-        availabilityEnd: userData.availabilityEnd || "",
-        lastDonation: null,
-        totalDonations: 0,
-      };
+      const userProfile = buildUserProfile(firebaseUser, userData);
 
       // 3. Save profile to Realtime Database under users/{uid}
       await set(ref(db, `users/${firebaseUser.uid}`), userProfile);
@@ -91,6 +94,71 @@ export const registerUser = createAsyncThunk(
       return { user: userProfile, token };
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.message || "Registration failed");
+    }
+  }
+);
+
+// --- GOOGLE SIGN IN / SIGN UP ---
+export const signInWithGoogle = createAsyncThunk(
+  "auth/signInWithGoogle",
+  async (_, thunkAPI) => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      const userCredential = await signInWithPopup(auth, provider);
+      const firebaseUser = userCredential.user;
+      const token = await firebaseUser.getIdToken();
+
+      const userRef = ref(db, `users/${firebaseUser.uid}`);
+      const snapshot = await get(userRef);
+
+      if (snapshot.exists()) {
+        const userProfile = normalizeUserRole(snapshot.val());
+        setLocalStorage("user", JSON.stringify(userProfile));
+        setLocalStorage("token", token);
+        removeLocalStorage("googleProfileDraft");
+        return { user: userProfile, token, needsProfile: false };
+      }
+
+      const draft = {
+        uid: firebaseUser.uid,
+        name: firebaseUser.displayName || "",
+        email: firebaseUser.email || "",
+      };
+
+      setLocalStorage("token", token);
+      setLocalStorage("googleProfileDraft", JSON.stringify(draft));
+      return { user: null, token, needsProfile: true, draft };
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.message || "Google sign in failed");
+    }
+  }
+);
+
+// --- COMPLETE GOOGLE PROFILE ---
+export const completeGoogleProfile = createAsyncThunk(
+  "auth/completeGoogleProfile",
+  async (userData: any, thunkAPI) => {
+    try {
+      const firebaseUser = auth.currentUser;
+
+      if (!firebaseUser) {
+        throw new Error("Please sign in with Google again to complete your profile.");
+      }
+
+      const token = await firebaseUser.getIdToken();
+      const userProfile = buildUserProfile(firebaseUser, userData);
+
+      await set(ref(db, `users/${firebaseUser.uid}`), userProfile);
+
+      setLocalStorage("user", JSON.stringify(userProfile));
+      setLocalStorage("token", token);
+      removeLocalStorage("googleProfileDraft");
+
+      return { user: userProfile, token };
+    } catch (error: any) {
+      return thunkAPI.rejectWithValue(error.message || "Failed to complete Google profile");
     }
   }
 );
@@ -158,6 +226,7 @@ export const logoutUser = createAsyncThunk("auth/logoutUser", async (_, thunkAPI
     await signOut(auth);
     removeLocalStorage("user");
     removeLocalStorage("token");
+    removeLocalStorage("googleProfileDraft");
     return null;
   } catch (error) {
     return thunkAPI.rejectWithValue("Logout failed");
@@ -206,10 +275,10 @@ export const fetchDonorsByCity = createAsyncThunk(
 );
 
 
-// --- UPDATE AVAILABILITY ---
+// --- UPDATE AVAILABILITY / PROFILE ---
 export const updateAvailable = createAsyncThunk(
   "auth/updateAvailable",
-  async (userData: { available?: boolean; availabilityStart?: string; availabilityEnd?: string }, thunkAPI) => {
+  async (userData: Partial<User>, thunkAPI) => {
     try {
       const state: any = thunkAPI.getState();
       const uid = state.auth.user?.uid;
@@ -311,6 +380,28 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
         state.error = (action.payload as string) || "Login failed";
+      })
+      // Google Sign In / Sign Up
+      .addCase(signInWithGoogle.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(signInWithGoogle.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+      })
+      .addCase(signInWithGoogle.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || "Google sign in failed";
+      })
+      // Complete Google Profile
+      .addCase(completeGoogleProfile.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(completeGoogleProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+      })
+      .addCase(completeGoogleProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || "Failed to complete Google profile";
       })
       // Auto Login
       .addCase(autoLogin.pending, (state) => { state.loading = true; })
