@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { registerUser, signInWithGoogle } from '../../../redux/authSlice';
 import { AppDispatch } from '../../../redux/store';
-import { User, Mail, Lock, Phone, MapPin, Calendar, Heart, Shield, ArrowLeft, Loader2, Chrome } from 'lucide-react';
+import { User, Mail, Lock, Phone, MapPin, Calendar, Heart, Shield, ArrowLeft, Loader2, RectangleGogglesIcon } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -167,7 +167,7 @@ export default function RegisterPage() {
           {loading ? (
             <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Connecting...</>
           ) : (
-            <><Chrome size={18} />Sign up with Google</>
+            <><RectangleGogglesIcon size={18} />Sign up with Google</>
           )}
         </button>
 
@@ -180,8 +180,8 @@ export default function RegisterPage() {
             <label className="form-label">Select Your Role *</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
               {[
-                { value: 'user',    label: 'User',          desc: 'Donate blood and request help' },
-                { value: 'bank',    label: '🏦 Blood Bank',  desc: 'Manage blood inventory' },
+                { value: 'user', label: 'User', desc: 'Donate blood and request help' },
+                { value: 'bank', label: '🏦 Blood Bank', desc: 'Manage blood inventory' },
               ].map(item => {
                 const sel = formData.role === item.value;
                 return (
@@ -250,7 +250,7 @@ export default function RegisterPage() {
                 <div className="input-icon-wrap">
                   <Shield size={15} className="input-icon" />
                   <select className="form-input-field" value={formData.bloodType} onChange={e => handleChange('bloodType', e.target.value)}>
-                    {['A+','A-','B+','B-','O+','O-','AB+','AB-'].map(b => (
+                    {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(b => (
                       <option key={b} value={b} style={{ background: '#0d1120' }}>{b}</option>
                     ))}
                   </select>

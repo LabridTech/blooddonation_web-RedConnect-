@@ -7,7 +7,7 @@ import { loginUser, signInWithGoogle } from '../../../redux/authSlice';
 import { AppDispatch, RootState } from '../../../redux/store';
 import {
   Mail, Lock, LogIn, ArrowLeft, Loader2, Heart,
-  HeartPulse, Droplet, ShieldCheck, Eye, EyeOff, Chrome
+  HeartPulse, Droplet, ShieldCheck, Eye, EyeOff, RectangleGogglesIcon
 } from 'lucide-react';
 
 const highlights = [
@@ -45,7 +45,7 @@ export default function LoginPage() {
     dispatch(loginUser({ email, password }))
       .unwrap()
       .then((res) => redirectUser(res.user.role))
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const handleGoogleAuth = () => {
@@ -56,7 +56,7 @@ export default function LoginPage() {
         if (res.needsProfile) router.push('/auth/complete-profile');
         else if (res.user) redirectUser(res.user.role);
       })
-      .catch(() => {});
+      .catch(() => { });
   };
 
   const displayError = validationError || error;
@@ -279,7 +279,7 @@ export default function LoginPage() {
             {loading ? (
               <><Loader2 size={18} style={{ animation: 'spinSlow 1s linear infinite' }} />Connecting...</>
             ) : (
-              <><Chrome size={18} />Continue with Google</>
+              <><RectangleGogglesIcon size={18} />Continue with Google</>
             )}
           </button>
 

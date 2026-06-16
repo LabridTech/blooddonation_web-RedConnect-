@@ -5,9 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../redux/authSlice';
 import { AppDispatch, RootState } from '../../redux/store';
-import { 
-  Hospital, LayoutDashboard, PlusCircle, Search, FileText, 
-  MessageSquare, LogOut, Loader2, Menu, X, Droplet, User, Archive 
+import {
+  Hospital, LayoutDashboard, PlusCircle, Search, FileText,
+  MessageSquare, LogOut, Loader2, Menu, X, Droplet, User, Archive
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -16,7 +16,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  
+
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -106,7 +106,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
           {menuItems.map(item => {
             const isActive = pathname === item.href;
             return (
-              <Link 
+              <Link
                 key={item.href}
                 href={item.href}
                 style={{
@@ -141,7 +141,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
           gap: '12px'
         }}>
           {user && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '8px' }}
+              onClick={() => router.push('/bank/setting')} className='cursor-pointer'
+            >
               <div style={{
                 width: '36px',
                 height: '36px',
@@ -168,7 +170,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             </div>
           )}
 
-          <button 
+          <button
             onClick={handleLogout}
             className="btn-premium btn-premium-secondary"
             style={{ width: '100%', padding: '10px', fontSize: '13px', borderRadius: '8px' }}
@@ -188,7 +190,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         paddingLeft: '0',
         transition: 'var(--transition-smooth)'
       }} id="main-content-area">
-        
+
         {/* MOBILE TOP NAVBAR */}
         <header className="glass-panel" style={{
           height: '64px',
@@ -201,7 +203,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
           zIndex: 40
         }} id="mobile-navbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button 
+            <button
               onClick={() => setMobileMenuOpen(true)}
               style={{
                 background: 'none',
@@ -219,8 +221,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
               <span style={{ fontSize: '15px', fontWeight: 700 }}>RedConnect Bank</span>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleLogout}
             style={{
               marginLeft: 'auto',
@@ -257,7 +259,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
                 <span style={{ fontWeight: 700, fontSize: '16px' }}>Navigation</span>
-                <button 
+                <button
                   onClick={() => setMobileMenuOpen(false)}
                   style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}
                 >
@@ -269,7 +271,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 {menuItems.map(item => {
                   const isActive = pathname === item.href;
                   return (
-                    <Link 
+                    <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
@@ -294,7 +296,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 })}
               </nav>
 
-              <button 
+              <button
                 onClick={handleLogout}
                 className="btn-premium btn-premium-secondary"
                 style={{ width: '100%', padding: '12px' }}
